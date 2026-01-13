@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Custom theme for calm, minimal design */
+@theme {
+  --color-calm-bg: #fafafa;
+  --color-calm-fg: #1a1a1a;
+  --color-calm-border: #e5e5e5;
+  --color-calm-accent: #4a5568;
+  --color-calm-hover: #2d3748;
+  --font-sans: system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background-color: var(--color-calm-bg);
+  color: var(--color-calm-fg);
+}
