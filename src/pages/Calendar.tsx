@@ -5,27 +5,57 @@ const MOCK_EVENTS: CalendarEvent[] = [
   {
     id: '1',
     title: 'Coffee with Sarah',
-    date: new Date('2024-01-20T10:00:00'),
+    date: new Date('2026-01-20T10:00:00'),
     sharedWith: ['1']
   },
   {
     id: '2',
     title: 'Career Planning Session',
-    date: new Date('2024-01-22T14:00:00'),
+    date: new Date('2026-01-22T14:00:00'),
     sharedWith: ['2'],
     needsBased: true
   },
   {
     id: '3',
     title: 'Project Review',
-    date: new Date('2024-01-25T16:00:00'),
+    date: new Date('2026-01-25T16:00:00'),
     sharedWith: ['2', '3']
   }
 ];
 
 export default function Calendar() {
-  const [events] = useState<CalendarEvent[]>(MOCK_EVENTS);
+  const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    date: '',
+    time: '',
+    needsBased: false
+  });
+
+  const handleAddEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newEvent.title.trim() && newEvent.date && newEvent.time) {
+      const eventDate = new Date(`${newEvent.date}T${newEvent.time}`);
+      const event: CalendarEvent = {
+        id: String(events.length + 1),
+        title: newEvent.title,
+        date: eventDate,
+        sharedWith: [],
+        needsBased: newEvent.needsBased
+      };
+      setEvents([...events, event]);
+      setNewEvent({ title: '', date: '', time: '', needsBased: false });
+      setShowAddForm(false);
+    }
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      setEvents(events.filter(e => e.id !== id));
+    }
+  };
 
   // Simple month view
   const getDaysInMonth = (date: Date) => {
@@ -64,31 +94,99 @@ export default function Calendar() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-light text-stone-900 mb-2">Calendar</h1>
-        <p className="text-stone-600">
-          Plan and coordinate with your trusted connections
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-light text-zinc-100 mb-2">Calendar</h1>
+          <p className="text-zinc-400">
+            Plan and coordinate with your trusted connections
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+        >
+          {showAddForm ? 'Cancel' : 'Add Event'}
+        </button>
       </div>
+
+      {/* Add Event Form */}
+      {showAddForm && (
+        <div className="mb-6 border border-zinc-800 p-6 bg-zinc-950">
+          <h2 className="text-lg font-medium text-zinc-100 mb-4">New Event</h2>
+          <form onSubmit={handleAddEvent} className="space-y-4">
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Title</label>
+              <input
+                type="text"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-100 focus:border-zinc-600 focus:outline-none"
+                placeholder="Event title"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={newEvent.date}
+                  onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                  className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-100 focus:border-zinc-600 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">Time</label>
+                <input
+                  type="time"
+                  value={newEvent.time}
+                  onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                  className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-100 focus:border-zinc-600 focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="needsBased"
+                checked={newEvent.needsBased}
+                onChange={(e) => setNewEvent({ ...newEvent, needsBased: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="needsBased" className="text-sm text-zinc-400">
+                Needs-based event
+              </label>
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+            >
+              Add Event
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar View */}
         <div className="lg:col-span-2">
-          <div className="border border-stone-200 bg-white p-6">
+          <div className="border border-zinc-800 bg-zinc-950 p-6">
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={() => navigateMonth('prev')}
-                className="px-4 py-2 border border-stone-300 hover:border-stone-400 text-stone-700 transition-colors"
+                className="px-4 py-2 border border-zinc-800 hover:border-zinc-600 text-zinc-300 transition-colors"
               >
                 Previous
               </button>
-              <h2 className="text-xl font-medium text-stone-900">
+              <h2 className="text-xl font-medium text-zinc-100">
                 {monthName}
               </h2>
               <button
                 onClick={() => navigateMonth('next')}
-                className="px-4 py-2 border border-stone-300 hover:border-stone-400 text-stone-700 transition-colors"
+                className="px-4 py-2 border border-zinc-800 hover:border-zinc-600 text-zinc-300 transition-colors"
               >
                 Next
               </button>
@@ -98,14 +196,14 @@ export default function Calendar() {
             <div className="grid grid-cols-7 gap-2">
               {/* Day headers */}
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-sm font-medium text-stone-600 py-2">
+                <div key={day} className="text-center text-sm font-medium text-zinc-400 py-2">
                   {day}
                 </div>
               ))}
               
               {/* Empty cells for days before month starts */}
               {Array.from({ length: startingDayOfWeek }).map((_, i) => (
-                <div key={`empty-${i}`} className="aspect-square border border-stone-100" />
+                <div key={`empty-${i}`} className="aspect-square border border-zinc-800" />
               ))}
               
               {/* Days of month */}
@@ -122,12 +220,12 @@ export default function Calendar() {
                     key={day}
                     className={`aspect-square border p-2 ${
                       isToday 
-                        ? 'border-stone-900 bg-stone-50' 
-                        : 'border-stone-200'
+                        ? 'border-zinc-100 bg-zinc-900' 
+                        : 'border-zinc-800'
                     }`}
                   >
                     <div className={`text-sm mb-1 ${
-                      isToday ? 'font-medium text-stone-900' : 'text-stone-700'
+                      isToday ? 'font-medium text-zinc-100' : 'text-zinc-400'
                     }`}>
                       {day}
                     </div>
@@ -138,8 +236,8 @@ export default function Calendar() {
                             key={event.id}
                             className={`text-xs px-1 py-0.5 truncate ${
                               event.needsBased 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-stone-200 text-stone-800'
+                                ? 'bg-blue-900 text-blue-200' 
+                                : 'bg-zinc-700 text-zinc-200'
                             }`}
                           >
                             {event.title}
@@ -156,8 +254,8 @@ export default function Calendar() {
 
         {/* Event List */}
         <div className="lg:col-span-1">
-          <div className="border border-stone-200 bg-white p-6 sticky top-4">
-            <h2 className="text-lg font-medium text-stone-900 mb-4">
+          <div className="border border-zinc-800 bg-zinc-950 p-6 sticky top-4">
+            <h2 className="text-lg font-medium text-zinc-100 mb-4">
               Upcoming Events
             </h2>
             <div className="space-y-4">
@@ -166,9 +264,9 @@ export default function Calendar() {
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .slice(0, 5)
                 .map(event => (
-                  <div key={event.id} className="border-l-2 border-stone-900 pl-3">
-                    <div className="font-medium text-stone-900">{event.title}</div>
-                    <div className="text-sm text-stone-600 mt-1">
+                  <div key={event.id} className="border-l-2 border-zinc-100 pl-3">
+                    <div className="font-medium text-zinc-100">{event.title}</div>
+                    <div className="text-sm text-zinc-400 mt-1">
                       {new Date(event.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -176,14 +274,20 @@ export default function Calendar() {
                         minute: '2-digit'
                       })}
                     </div>
-                    <div className="text-xs text-stone-500 mt-1">
+                    <div className="text-xs text-zinc-500 mt-1">
                       Shared with {event.sharedWith.length} {event.sharedWith.length === 1 ? 'person' : 'people'}
                     </div>
                     {event.needsBased && (
-                      <div className="text-xs text-blue-600 mt-1">
+                      <div className="text-xs text-blue-400 mt-1">
                         Needs-based event
                       </div>
                     )}
+                    <button
+                      onClick={() => handleDeleteEvent(event.id)}
+                      className="text-xs mt-2 px-2 py-1 bg-red-900 text-red-200 hover:bg-red-800 transition-colors"
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
             </div>
