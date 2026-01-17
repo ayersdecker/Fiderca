@@ -3,7 +3,7 @@ import type { Vault } from '../types';
 import { useUserData } from '../contexts/UserDataContext';
 
 export default function Vaults() {
-  const { vaults, connections, addVault, updateVault } = useUserData();
+  const { vaults, addVault, updateVault } = useUserData();
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newVault, setNewVault] = useState({

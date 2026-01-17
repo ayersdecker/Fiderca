@@ -235,11 +235,11 @@ export default function Calendar() {
               Upcoming Events
             </h2>
             <div className="space-y-4">
-              {events
-                .filter(e => new Date(e.date) >= new Date())
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              {calendarEvents
+                .filter((e: { date: Date }) => new Date(e.date) >= new Date())
+                .sort((a: { date: Date }, b: { date: Date }) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .slice(0, 5)
-                .map(event => (
+                .map((event: { id: string; title: string; date: Date }) => (
                   <div key={event.id} className="border-l-2 border-zinc-100 pl-3">
                     <div className="font-medium text-zinc-100">{event.title}</div>
                     <div className="text-sm text-zinc-400 mt-1">
