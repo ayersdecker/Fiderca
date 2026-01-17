@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { CalendarEvent } from '../types';
 import { useUserData } from '../contexts/UserDataContext';
 
 export default function Calendar() {
@@ -236,10 +237,10 @@ export default function Calendar() {
             </h2>
             <div className="space-y-4">
               {calendarEvents
-                .filter((e: { date: Date }) => new Date(e.date) >= new Date())
-                .sort((a: { date: Date }, b: { date: Date }) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .filter((e: CalendarEvent) => new Date(e.date) >= new Date())
+                .sort((a: CalendarEvent, b: CalendarEvent) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .slice(0, 5)
-                .map((event: { id: string; title: string; date: Date }) => (
+                .map((event: CalendarEvent) => (
                   <div key={event.id} className="border-l-2 border-zinc-100 pl-3">
                     <div className="font-medium text-zinc-100">{event.title}</div>
                     <div className="text-sm text-zinc-400 mt-1">
