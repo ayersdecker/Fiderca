@@ -1,34 +1,6 @@
 import { useState } from 'react';
-import type { Connection, TrustLevel } from '../types';
-
-const MOCK_CONNECTIONS: Connection[] = [
-  {
-    id: '1',
-    name: 'Sarah Chen',
-    trustLevel: 'core',
-    connectedAt: new Date('2024-01-15'),
-    notes: 'Close friend from college'
-  },
-  {
-    id: '2',
-    name: 'Marcus Johnson',
-    trustLevel: 'close',
-    connectedAt: new Date('2024-03-20'),
-    notes: 'Mentor in career transition'
-  },
-  {
-    id: '3',
-    name: 'Elena Rodriguez',
-    trustLevel: 'trusted',
-    connectedAt: new Date('2024-06-10')
-  },
-  {
-    id: '4',
-    name: 'David Kim',
-    trustLevel: 'known',
-    connectedAt: new Date('2024-08-01')
-  }
-];
+import type { TrustLevel } from '../types';
+import { useUserData } from '../contexts/UserDataContext';
 
 const TRUST_LEVEL_INFO: Record<TrustLevel, { label: string; description: string; color: string }> = {
   core: {
@@ -54,7 +26,7 @@ const TRUST_LEVEL_INFO: Record<TrustLevel, { label: string; description: string;
 };
 
 export default function Connections() {
-  const [connections, setConnections] = useState<Connection[]>(MOCK_CONNECTIONS);
+  const { connections, addConnection, deleteConnection } = useUserData();
   const [selectedTrustLevel, setSelectedTrustLevel] = useState<TrustLevel | 'all'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newConnection, setNewConnection] = useState({
@@ -70,14 +42,11 @@ export default function Connections() {
   const handleAddConnection = (e: React.FormEvent) => {
     e.preventDefault();
     if (newConnection.name.trim()) {
-      const connection: Connection = {
-        id: String(connections.length + 1),
+      addConnection({
         name: newConnection.name,
         trustLevel: newConnection.trustLevel,
-        connectedAt: new Date(),
         notes: newConnection.notes || undefined
-      };
-      setConnections([...connections, connection]);
+      });
       setNewConnection({ name: '', trustLevel: 'known', notes: '' });
       setShowAddForm(false);
     }
@@ -85,7 +54,7 @@ export default function Connections() {
 
   const handleDeleteConnection = (id: string) => {
     if (window.confirm('Are you sure you want to remove this connection?')) {
-      setConnections(connections.filter(c => c.id !== id));
+      deleteConnection(id);
     }
   };
 
@@ -100,7 +69,7 @@ export default function Connections() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+          className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
         >
           {showAddForm ? 'Cancel' : 'Add Connection'}
         </button>
@@ -146,7 +115,7 @@ export default function Connections() {
             </div>
             <button
               type="submit"
-              className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+              className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
             >
               Add Connection
             </button>
@@ -175,7 +144,7 @@ export default function Connections() {
           onClick={() => setSelectedTrustLevel('all')}
           className={`px-4 py-2 border transition-colors ${
             selectedTrustLevel === 'all'
-              ? 'bg-zinc-100 text-zinc-900 border-zinc-100'
+              ? 'bg-zinc-700 text-zinc-100 border-zinc-600'
               : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-600'
           }`}
         >
@@ -187,7 +156,7 @@ export default function Connections() {
             onClick={() => setSelectedTrustLevel(level)}
             className={`px-4 py-2 border transition-colors ${
               selectedTrustLevel === level
-                ? 'bg-zinc-100 text-zinc-900 border-zinc-100'
+                ? 'bg-zinc-700 text-zinc-100 border-zinc-600'
                 : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-600'
             }`}
           >

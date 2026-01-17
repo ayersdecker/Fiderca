@@ -1,30 +1,8 @@
 import { useState } from 'react';
-import type { CalendarEvent } from '../types';
-
-const MOCK_EVENTS: CalendarEvent[] = [
-  {
-    id: '1',
-    title: 'Coffee with Sarah',
-    date: new Date('2026-01-20T10:00:00'),
-    sharedWith: ['1']
-  },
-  {
-    id: '2',
-    title: 'Career Planning Session',
-    date: new Date('2026-01-22T14:00:00'),
-    sharedWith: ['2'],
-    needsBased: true
-  },
-  {
-    id: '3',
-    title: 'Project Review',
-    date: new Date('2026-01-25T16:00:00'),
-    sharedWith: ['2', '3']
-  }
-];
+import { useUserData } from '../contexts/UserDataContext';
 
 export default function Calendar() {
-  const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
+  const { calendarEvents, addCalendarEvent, deleteCalendarEvent } = useUserData();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEvent, setNewEvent] = useState({
@@ -38,14 +16,12 @@ export default function Calendar() {
     e.preventDefault();
     if (newEvent.title.trim() && newEvent.date && newEvent.time) {
       const eventDate = new Date(`${newEvent.date}T${newEvent.time}`);
-      const event: CalendarEvent = {
-        id: String(events.length + 1),
+      addCalendarEvent({
         title: newEvent.title,
         date: eventDate,
         sharedWith: [],
         needsBased: newEvent.needsBased
-      };
-      setEvents([...events, event]);
+      });
       setNewEvent({ title: '', date: '', time: '', needsBased: false });
       setShowAddForm(false);
     }
@@ -53,7 +29,7 @@ export default function Calendar() {
 
   const handleDeleteEvent = (id: string) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
-      setEvents(events.filter(e => e.id !== id));
+      deleteCalendarEvent(id);
     }
   };
 
@@ -74,7 +50,7 @@ export default function Calendar() {
   const monthName = selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   const getEventsForDay = (day: number) => {
-    return events.filter(event => {
+    return calendarEvents.filter(event => {
       const eventDate = new Date(event.date);
       return eventDate.getDate() === day &&
              eventDate.getMonth() === selectedDate.getMonth() &&
@@ -103,7 +79,7 @@ export default function Calendar() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+          className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
         >
           {showAddForm ? 'Cancel' : 'Add Event'}
         </button>
@@ -161,7 +137,7 @@ export default function Calendar() {
             </div>
             <button
               type="submit"
-              className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+              className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
             >
               Add Event
             </button>

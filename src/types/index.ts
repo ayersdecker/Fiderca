@@ -41,3 +41,12 @@ export interface Need {
   postedAt: Date;
   trustLevelRequired: TrustLevel;
 }
+
+// User data structure
+export interface UserData {
+  userId: string;
+  connections: Connection[];
+  vaults: Vault[];
+  calendarEvents: CalendarEvent[];
+  needs: Need[];
+}

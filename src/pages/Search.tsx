@@ -1,45 +1,11 @@
 import { useState } from 'react';
-import type { Need, TrustLevel } from '../types';
-
-const MOCK_NEEDS: Need[] = [
-  {
-    id: '1',
-    category: 'Professional',
-    description: 'Looking for a software architect to review system design',
-    postedBy: 'Marcus Johnson',
-    postedAt: new Date('2024-01-15'),
-    trustLevelRequired: 'trusted'
-  },
-  {
-    id: '2',
-    category: 'Personal',
-    description: 'Need recommendations for family therapist',
-    postedBy: 'Sarah Chen',
-    postedAt: new Date('2024-01-18'),
-    trustLevelRequired: 'close'
-  },
-  {
-    id: '3',
-    category: 'Skill Share',
-    description: 'Can teach Spanish, looking to learn Python',
-    postedBy: 'Elena Rodriguez',
-    postedAt: new Date('2024-01-20'),
-    trustLevelRequired: 'known'
-  },
-  {
-    id: '4',
-    category: 'Professional',
-    description: 'Seeking mentorship in product management transition',
-    postedBy: 'David Kim',
-    postedAt: new Date('2024-01-22'),
-    trustLevelRequired: 'trusted'
-  }
-];
+import type { TrustLevel } from '../types';
+import { useUserData } from '../contexts/UserDataContext';
 
 const CATEGORIES = ['All', 'Professional', 'Personal', 'Skill Share', 'Community'];
 
 export default function Search() {
-  const [needs, setNeeds] = useState<Need[]>(MOCK_NEEDS);
+  const { needs, addNeed } = useUserData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showPostForm, setShowPostForm] = useState(false);
@@ -52,15 +18,11 @@ export default function Search() {
   const handlePostNeed = (e: React.FormEvent) => {
     e.preventDefault();
     if (newNeed.description.trim()) {
-      const need: Need = {
-        id: String(needs.length + 1),
+      addNeed({
         category: newNeed.category,
         description: newNeed.description,
-        postedBy: 'You',
-        postedAt: new Date(),
         trustLevelRequired: newNeed.trustLevelRequired
-      };
-      setNeeds([...needs, need]);
+      });
       setNewNeed({ category: 'Professional', description: '', trustLevelRequired: 'known' });
       setShowPostForm(false);
     }
@@ -94,7 +56,7 @@ export default function Search() {
         </div>
         <button
           onClick={() => setShowPostForm(!showPostForm)}
-          className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+          className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
         >
           {showPostForm ? 'Cancel' : 'Post a Need'}
         </button>
@@ -143,7 +105,7 @@ export default function Search() {
             </div>
             <button
               type="submit"
-              className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+              className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
             >
               Post Need
             </button>
@@ -170,7 +132,7 @@ export default function Search() {
               onClick={() => setSelectedCategory(category)}
               className={`px-4 py-2 border transition-colors ${
                 selectedCategory === category
-                  ? 'bg-zinc-100 text-zinc-900 border-zinc-100'
+                  ? 'bg-zinc-700 text-zinc-100 border-zinc-600'
                   : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-600'
               }`}
             >
@@ -216,7 +178,7 @@ export default function Search() {
                     Posted by {need.postedBy} on {need.postedAt.toLocaleDateString()}
                   </div>
                   <button 
-                    className="px-4 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+                    className="px-4 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
                     onClick={() => {
                       if (window.confirm('Do you want to respond to this need? This will share your contact information with the poster.')) {
                         alert('Response sent! The connection has been notified.');

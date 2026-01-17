@@ -1,55 +1,9 @@
 import { useState } from 'react';
 import type { Vault } from '../types';
-
-const MOCK_VAULTS: Vault[] = [
-  {
-    id: '1',
-    name: 'Medical Records',
-    description: 'Health information and medical history',
-    createdAt: new Date('2024-01-10'),
-    sharedWith: [
-      {
-        connectionId: '1',
-        grantedAt: new Date('2024-01-10'),
-        canRevoke: true
-      },
-      {
-        connectionId: '2',
-        grantedAt: new Date('2024-02-15'),
-        expiresAt: new Date('2024-12-31'),
-        canRevoke: true
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Professional Portfolio',
-    description: 'Resume, certifications, and project work',
-    createdAt: new Date('2024-03-05'),
-    sharedWith: [
-      {
-        connectionId: '2',
-        grantedAt: new Date('2024-03-05'),
-        canRevoke: true
-      },
-      {
-        connectionId: '3',
-        grantedAt: new Date('2024-05-20'),
-        canRevoke: true
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Personal References',
-    description: 'Character references and recommendations',
-    createdAt: new Date('2024-04-12'),
-    sharedWith: []
-  }
-];
+import { useUserData } from '../contexts/UserDataContext';
 
 export default function Vaults() {
-  const [vaults, setVaults] = useState<Vault[]>(MOCK_VAULTS);
+  const { vaults, connections, addVault, updateVault } = useUserData();
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newVault, setNewVault] = useState({
@@ -60,14 +14,10 @@ export default function Vaults() {
   const handleAddVault = (e: React.FormEvent) => {
     e.preventDefault();
     if (newVault.name.trim()) {
-      const vault: Vault = {
-        id: String(vaults.length + 1),
+      addVault({
         name: newVault.name,
-        description: newVault.description,
-        createdAt: new Date(),
-        sharedWith: []
-      };
-      setVaults([...vaults, vault]);
+        description: newVault.description
+      });
       setNewVault({ name: '', description: '' });
       setShowAddForm(false);
     }
@@ -75,21 +25,15 @@ export default function Vaults() {
 
   const handleRevokeAccess = (vaultId: string, connectionId: string) => {
     if (window.confirm('Are you sure you want to revoke access? This action cannot be undone.')) {
-      setVaults(vaults.map(vault => {
-        if (vault.id === vaultId) {
-          return {
+      const vault = vaults.find(v => v.id === vaultId);
+      if (vault) {
+        updateVault(vaultId, {
+          sharedWith: vault.sharedWith.filter(access => access.connectionId !== connectionId)
+        });
+        if (selectedVault?.id === vaultId) {
+          setSelectedVault({
             ...vault,
             sharedWith: vault.sharedWith.filter(access => access.connectionId !== connectionId)
-          };
-        }
-        return vault;
-      }));
-      if (selectedVault?.id === vaultId) {
-        const updatedVault = vaults.find(v => v.id === vaultId);
-        if (updatedVault) {
-          setSelectedVault({
-            ...updatedVault,
-            sharedWith: updatedVault.sharedWith.filter(access => access.connectionId !== connectionId)
           });
         }
       }
@@ -99,29 +43,23 @@ export default function Vaults() {
   const handleGrantAccess = (vaultId: string) => {
     const connectionId = window.prompt('Enter connection ID to grant access:');
     if (connectionId) {
-      setVaults(vaults.map(vault => {
-        if (vault.id === vaultId) {
-          return {
+      const vault = vaults.find(v => v.id === vaultId);
+      if (vault) {
+        updateVault(vaultId, {
+          sharedWith: [
+            ...vault.sharedWith,
+            {
+              connectionId,
+              grantedAt: new Date(),
+              canRevoke: true
+            }
+          ]
+        });
+        if (selectedVault?.id === vaultId) {
+          setSelectedVault({
             ...vault,
             sharedWith: [
               ...vault.sharedWith,
-              {
-                connectionId,
-                grantedAt: new Date(),
-                canRevoke: true
-              }
-            ]
-          };
-        }
-        return vault;
-      }));
-      if (selectedVault?.id === vaultId) {
-        const updatedVault = vaults.find(v => v.id === vaultId);
-        if (updatedVault) {
-          setSelectedVault({
-            ...updatedVault,
-            sharedWith: [
-              ...updatedVault.sharedWith,
               {
                 connectionId,
                 grantedAt: new Date(),
@@ -145,7 +83,7 @@ export default function Vaults() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+          className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
         >
           {showAddForm ? 'Cancel' : 'Create Vault'}
         </button>
@@ -180,7 +118,7 @@ export default function Vaults() {
             </div>
             <button
               type="submit"
-              className="px-6 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+              className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
             >
               Create Vault
             </button>
@@ -272,7 +210,7 @@ export default function Vaults() {
               <div className="mt-6 pt-4 border-t border-zinc-800">
                 <button 
                   onClick={() => handleGrantAccess(selectedVault.id)}
-                  className="w-full px-4 py-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors"
+                  className="w-full px-4 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
                 >
                   Grant Access
                 </button>
