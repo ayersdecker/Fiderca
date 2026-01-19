@@ -36,7 +36,7 @@ const EMPTY_USER_DATA: Omit<UserData, 'userId'> = {
 export function UserDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [userData, setUserData] = useState<Omit<UserData, 'userId'>>(EMPTY_USER_DATA);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Subscribe to real-time Firestore updates when user changes
   useEffect(() => {
@@ -45,20 +45,26 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-
+    
     setIsLoading(true);
+    let mounted = true;
     
     // Initialize user data in Firestore if it doesn't exist
     firestoreService.initializeUserData(user.sub).catch(console.error);
     
     // Subscribe to real-time updates
     const unsubscribe = firestoreService.subscribeToUserData(user.sub, (data) => {
-      setUserData(data);
-      setIsLoading(false);
+      if (mounted) {
+        setUserData(data);
+        setIsLoading(false);
+      }
     });
 
     // Cleanup subscription on unmount or user change
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, [user]);
 
   // Connection methods

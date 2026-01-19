@@ -10,14 +10,14 @@ import { db } from '../config/firebase';
 import type { Connection, Vault, CalendarEvent, Need, UserData } from '../types';
 
 // Helper to convert Firestore timestamps to Date objects
-function timestampToDate(timestamp: any): Date {
-  if (timestamp?.toDate) {
+function timestampToDate(timestamp: unknown): Date {
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
     return timestamp.toDate();
   }
   if (timestamp instanceof Date) {
     return timestamp;
   }
-  return new Date(timestamp);
+  return new Date(timestamp as string | number);
 }
 
 // Helper to convert Date objects to Firestore timestamps
@@ -43,24 +43,24 @@ export function subscribeToUserData(
       
       // Convert Firestore data back to our types with Date objects
       const userData = {
-        connections: (data.connections || []).map((c: any) => ({
+        connections: (data.connections || []).map((c: Record<string, unknown>) => ({
           ...c,
           connectedAt: timestampToDate(c.connectedAt),
         })),
-        vaults: (data.vaults || []).map((v: any) => ({
+        vaults: (data.vaults || []).map((v: Record<string, unknown>) => ({
           ...v,
           createdAt: timestampToDate(v.createdAt),
-          sharedWith: (v.sharedWith || []).map((access: any) => ({
+          sharedWith: (v.sharedWith as Array<Record<string, unknown>> || []).map((access: Record<string, unknown>) => ({
             ...access,
             grantedAt: timestampToDate(access.grantedAt),
             expiresAt: access.expiresAt ? timestampToDate(access.expiresAt) : undefined,
           })),
         })),
-        calendarEvents: (data.calendarEvents || []).map((e: any) => ({
+        calendarEvents: (data.calendarEvents || []).map((e: Record<string, unknown>) => ({
           ...e,
           date: timestampToDate(e.date),
         })),
-        needs: (data.needs || []).map((n: any) => ({
+        needs: (data.needs || []).map((n: Record<string, unknown>) => ({
           ...n,
           postedAt: timestampToDate(n.postedAt),
         })),
@@ -133,7 +133,7 @@ export async function updateConnection(
   const currentData = docSnap.data();
   
   if (currentData?.connections) {
-    const connections = currentData.connections.map((c: any) =>
+    const connections = (currentData.connections as Array<Record<string, unknown>>).map((c: Record<string, unknown>) =>
       c.id === connectionId ? { ...c, ...updates } : c
     );
     await updateDoc(userDataRef, { connections });
@@ -146,7 +146,7 @@ export async function deleteConnection(userId: string, connectionId: string): Pr
   const currentData = docSnap.data();
   
   if (currentData?.connections) {
-    const connections = currentData.connections.filter((c: any) => c.id !== connectionId);
+    const connections = (currentData.connections as Array<Record<string, unknown>>).filter((c: Record<string, unknown>) => c.id !== connectionId);
     await updateDoc(userDataRef, { connections });
   }
 }
@@ -190,7 +190,7 @@ export async function updateVault(
   const currentData = docSnap.data();
   
   if (currentData?.vaults) {
-    const vaults = currentData.vaults.map((v: any) =>
+    const vaults = (currentData.vaults as Array<Record<string, unknown>>).map((v: Record<string, unknown>) =>
       v.id === vaultId ? { ...v, ...updates } : v
     );
     await updateDoc(userDataRef, { vaults });
@@ -203,7 +203,7 @@ export async function deleteVault(userId: string, vaultId: string): Promise<void
   const currentData = docSnap.data();
   
   if (currentData?.vaults) {
-    const vaults = currentData.vaults.filter((v: any) => v.id !== vaultId);
+    const vaults = (currentData.vaults as Array<Record<string, unknown>>).filter((v: Record<string, unknown>) => v.id !== vaultId);
     await updateDoc(userDataRef, { vaults });
   }
 }
@@ -250,7 +250,7 @@ export async function updateCalendarEvent(
       date: updates.date ? dateToTimestamp(updates.date) : undefined,
     };
     
-    const calendarEvents = currentData.calendarEvents.map((e: any) =>
+    const calendarEvents = (currentData.calendarEvents as Array<Record<string, unknown>>).map((e: Record<string, unknown>) =>
       e.id === eventId ? { ...e, ...updatesWithTimestamp } : e
     );
     await updateDoc(userDataRef, { calendarEvents });
@@ -263,7 +263,7 @@ export async function deleteCalendarEvent(userId: string, eventId: string): Prom
   const currentData = docSnap.data();
   
   if (currentData?.calendarEvents) {
-    const calendarEvents = currentData.calendarEvents.filter((e: any) => e.id !== eventId);
+    const calendarEvents = (currentData.calendarEvents as Array<Record<string, unknown>>).filter((e: Record<string, unknown>) => e.id !== eventId);
     await updateDoc(userDataRef, { calendarEvents });
   }
 }
@@ -308,7 +308,7 @@ export async function updateNeed(
   const currentData = docSnap.data();
   
   if (currentData?.needs) {
-    const needs = currentData.needs.map((n: any) =>
+    const needs = (currentData.needs as Array<Record<string, unknown>>).map((n: Record<string, unknown>) =>
       n.id === needId ? { ...n, ...updates } : n
     );
     await updateDoc(userDataRef, { needs });
@@ -321,7 +321,7 @@ export async function deleteNeed(userId: string, needId: string): Promise<void> 
   const currentData = docSnap.data();
   
   if (currentData?.needs) {
-    const needs = currentData.needs.filter((n: any) => n.id !== needId);
+    const needs = (currentData.needs as Array<Record<string, unknown>>).filter((n: Record<string, unknown>) => n.id !== needId);
     await updateDoc(userDataRef, { needs });
   }
 }

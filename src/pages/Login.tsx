@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,9 +19,10 @@ function Login() {
       
       // Navigate to home - AuthContext will handle the user state
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login Failed:', error);
-      setError(error.message || 'Failed to sign in with Google. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
