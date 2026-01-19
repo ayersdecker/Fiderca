@@ -1,12 +1,24 @@
 import { useState } from 'react';
-import { signInWithPopup } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { useNavigate } from 'react-router-dom';
+import { initializeUserProfile } from '../services/users';
 
 function Login() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
+  
+  // Form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -14,10 +26,7 @@ function Login() {
     
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      
       console.log('Sign-in successful:', result.user);
-      
-      // Navigate to home - AuthContext will handle the user state
       navigate('/');
     } catch (error: unknown) {
       console.error('Login Failed:', error);
@@ -28,13 +37,79 @@ function Login() {
     }
   };
 
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (isSignUp) {
+        // Sign up with email/password
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Update profile with display name
+        if (displayName) {
+          await updateProfile(result.user, { displayName });
+        }
+        
+        // Initialize user profile in Firestore
+        await initializeUserProfile(
+          result.user.uid,
+          email,
+          displayName || email.split('@')[0],
+          ''
+        );
+        
+        console.log('Sign-up successful:', result.user);
+      } else {
+        // Sign in with email/password
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        console.log('Sign-in successful:', result.user);
+      }
+      
+      navigate('/');
+    } catch (error: unknown) {
+      console.error('Auth error:', error);
+      if (error instanceof Error) {
+        // Parse Firebase error codes to user-friendly messages
+        const errorCode = (error as { code?: string }).code;
+        switch (errorCode) {
+          case 'auth/email-already-in-use':
+            setError('This email is already registered. Please sign in instead.');
+            break;
+          case 'auth/weak-password':
+            setError('Password should be at least 6 characters.');
+            break;
+          case 'auth/invalid-email':
+            setError('Invalid email address.');
+            break;
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            setError('Invalid email or password.');
+            break;
+          case 'auth/invalid-credential':
+            setError('Invalid email or password.');
+            break;
+          default:
+            setError(error.message);
+        }
+      } else {
+        setError('Authentication failed. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-900 px-4">
       <div className="max-w-md w-full space-y-6 sm:space-y-8 p-6 sm:p-8 bg-zinc-950 border border-zinc-800 shadow-lg">
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-light text-zinc-100">Welcome to Fiderca</h2>
+          <h2 className="text-2xl sm:text-3xl font-light text-zinc-100">
+            {isSignUp ? 'Create Account' : 'Welcome to Fiderca'}
+          </h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Sign in with your Google account to continue
+            {isSignUp ? 'Join your circles' : 'Sign in to continue'}
           </p>
         </div>
         
@@ -43,8 +118,94 @@ function Login() {
             {error}
           </div>
         )}
+
+        {/* Email/Password Form */}
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          {isSignUp && (
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-zinc-300 mb-1">
+                Display Name
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required={isSignUp}
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-zinc-500"
+                placeholder="John Doe"
+              />
+            </div>
+          )}
+          
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-zinc-500"
+              placeholder="you@example.com"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-zinc-500"
+              placeholder="••••••••"
+            />
+            {isSignUp && (
+              <p className="mt-1 text-xs text-zinc-500">At least 6 characters</p>
+            )}
+          </div>
+          
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-600 text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+          </button>
+        </form>
+
+        {/* Toggle Sign Up / Sign In */}
+        <div className="text-center">
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError(null);
+            }}
+            className="text-sm text-zinc-400 hover:text-zinc-300"
+          >
+            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-800"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-zinc-950 text-zinc-500">Or continue with</span>
+          </div>
+        </div>
         
-        <div className="flex justify-center mt-6 sm:mt-8">
+        {/* Google Sign In */}
+        <div className="flex justify-center">
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
