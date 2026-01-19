@@ -14,7 +14,6 @@ function Login() {
     
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
       
       console.log('Sign-in successful:', result.user);
       
