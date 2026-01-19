@@ -165,11 +165,6 @@ export default function Connections() {
     }
   };
 
-  const handleAddConnection = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Removed - no longer adding offline connections
-  };
-
   const handleAcceptRequest = async (request: ConnectionRequest) => {
     if (!user) return;
 

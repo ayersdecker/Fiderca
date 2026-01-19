@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import type { Vault, Connection } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 import { useUserData } from '../contexts/UserDataContext';
 
 export default function Vaults() {
-  const { user } = useAuth();
   const { vaults, sharedVaults, connections, addVault, updateVault } = useUserData();
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
