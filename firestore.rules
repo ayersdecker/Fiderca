@@ -22,15 +22,28 @@ service cloud.firestore {
                       request.resource.data.keys().hasAll(['connections', 'vaults', 'calendarEvents', 'needs']);
     }
     
-    // Public needs board (optional future feature)
-    // Uncomment if you want a shared needs board
-    // match /publicNeeds/{needId} {
-    //   allow read: if isSignedIn();
-    //   allow create: if isSignedIn() && 
-    //                   request.resource.data.postedBy == request.auth.uid;
-    //   allow update, delete: if isSignedIn() && 
-    //                           resource.data.postedBy == request.auth.uid;
-    // }
+    // User profiles - readable by authenticated users for search
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for search)
+      allow read: if isSignedIn();
+      // Users can only write their own profile
+      allow write: if isOwner(userId);
+    }
+    
+    // Connection requests
+    match /connectionRequests/{requestId} {
+      // Users can read requests where they are sender or receiver
+      allow read: if isSignedIn() && 
+                    (resource.data.fromUserId == request.auth.uid || 
+                     resource.data.toUserId == request.auth.uid);
+      // Users can create requests where they are the sender
+      allow create: if isSignedIn() && 
+                      request.resource.data.fromUserId == request.auth.uid;
+      // Users can update/delete requests where they are sender or receiver
+      allow update, delete: if isSignedIn() && 
+                              (resource.data.fromUserId == request.auth.uid || 
+                               resource.data.toUserId == request.auth.uid);
+    }
     
     // Deny all other access
     match /{document=**} {

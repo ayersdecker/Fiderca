@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { initializeUserProfile } from '../services/users';
 
 export interface User {
   email: string;
@@ -27,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Subscribe to Firebase auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setFirebaseUser(firebaseUser);
       
       if (firebaseUser) {
@@ -40,6 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Initialize user profile in Firestore
+        if (firebaseUser.email && firebaseUser.displayName) {
+          initializeUserProfile(
+            firebaseUser.uid,
+            firebaseUser.email,
+            firebaseUser.displayName,
+            firebaseUser.photoURL || ''
+          ).catch(console.error);
+        }
       } else {
         setUser(null);
         localStorage.removeItem('user');

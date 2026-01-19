@@ -1,198 +1,170 @@
 import { useState } from 'react';
-import type { TrustLevel } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { useUserData } from '../contexts/UserDataContext';
-
-const CATEGORIES = ['All', 'Professional', 'Personal', 'Skill Share', 'Community'];
+import { searchUsersByEmail, type UserProfile } from '../services/users';
+import { 
+  sendConnectionRequest, 
+  checkExistingRequest 
+} from '../services/connectionRequests';
 
 export default function Search() {
-  const { needs, addNeed } = useUserData();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showPostForm, setShowPostForm] = useState(false);
-  const [newNeed, setNewNeed] = useState({
-    category: 'Professional',
-    description: '',
-    trustLevelRequired: 'known' as TrustLevel
-  });
+  const { user } = useAuth();
+  const { connections } = useUserData();
+  const [searchEmail, setSearchEmail] = useState('');
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handlePostNeed = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newNeed.description.trim()) {
-      addNeed({
-        category: newNeed.category,
-        description: newNeed.description,
-        trustLevelRequired: newNeed.trustLevelRequired
-      });
-      setNewNeed({ category: 'Professional', description: '', trustLevelRequired: 'known' });
-      setShowPostForm(false);
+    if (!searchEmail.trim()) return;
+
+    setIsSearching(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const results = await searchUsersByEmail(searchEmail.toLowerCase().trim());
+      // Filter out current user and existing connections
+      const filteredResults = results.filter(
+        (result) => 
+          result.userId !== user?.sub &&
+          !connections.some((conn) => conn.id === result.userId)
+      );
+      setSearchResults(filteredResults);
+      
+      if (filteredResults.length === 0) {
+        setError('No users found with that email.');
+      }
+    } catch (err) {
+      console.error('Search error:', err);
+      setError('Failed to search users. Please try again.');
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const filteredNeeds = needs.filter(need => {
-    const matchesSearch = need.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         need.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || need.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const handleSendRequest = async (toUser: UserProfile) => {
+    if (!user) return;
 
-  const getTrustLevelColor = (level: TrustLevel): string => {
-    const colors = {
-      core: 'text-emerald-400',
-      close: 'text-blue-400',
-      trusted: 'text-amber-400',
-      known: 'text-zinc-400'
-    };
-    return colors[level];
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      // Check if request already exists
+      const exists = await checkExistingRequest(user.sub, toUser.userId);
+      if (exists) {
+        setError('A connection request already exists with this user.');
+        return;
+      }
+
+      await sendConnectionRequest(
+        user.sub,
+        user.name,
+        user.email,
+        user.picture,
+        toUser.userId,
+        toUser.name,
+        toUser.email,
+        toUser.picture
+      );
+
+      setSuccessMessage(`Connection request sent to ${toUser.name}!`);
+      // Remove from search results
+      setSearchResults(searchResults.filter((u) => u.userId !== toUser.userId));
+    } catch (err) {
+      console.error('Send request error:', err);
+      setError('Failed to send connection request. Please try again.');
+    }
   };
 
   return (
-    <div>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-light text-zinc-100 mb-2">Search by Need</h1>
-          <p className="text-zinc-400">
-            Find connections based on what matters, not popularity
-          </p>
-        </div>
-        <button
-          onClick={() => setShowPostForm(!showPostForm)}
-          className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
-        >
-          {showPostForm ? 'Cancel' : 'Post a Need'}
-        </button>
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-light text-zinc-100 mb-2">
+          Find Connections
+        </h1>
+        <p className="text-sm sm:text-base text-zinc-400">
+          Search for people by email and send connection requests
+        </p>
       </div>
 
-      {/* Post Need Form */}
-      {showPostForm && (
-        <div className="mb-6 border border-zinc-800 p-6 bg-zinc-950">
-          <h2 className="text-lg font-medium text-zinc-100 mb-4">Share Your Need</h2>
-          <form onSubmit={handlePostNeed} className="space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Category</label>
-              <select
-                value={newNeed.category}
-                onChange={(e) => setNewNeed({ ...newNeed, category: e.target.value })}
-                className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-100 focus:border-zinc-600 focus:outline-none"
-              >
-                {CATEGORIES.filter(c => c !== 'All').map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Description</label>
-              <textarea
-                value={newNeed.description}
-                onChange={(e) => setNewNeed({ ...newNeed, description: e.target.value })}
-                className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-100 focus:border-zinc-600 focus:outline-none"
-                rows={3}
-                placeholder="Describe your need or what you can offer"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Trust Level Required</label>
-              <select
-                value={newNeed.trustLevelRequired}
-                onChange={(e) => setNewNeed({ ...newNeed, trustLevelRequired: e.target.value as TrustLevel })}
-                className="w-full px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-100 focus:border-zinc-600 focus:outline-none"
-              >
-                <option value="known">Known</option>
-                <option value="trusted">Trusted</option>
-                <option value="close">Close</option>
-                <option value="core">Core</option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
-            >
-              Post Need
-            </button>
-          </form>
+      <form onSubmit={handleSearch} className="mb-6">
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={searchEmail}
+            onChange={(e) => setSearchEmail(e.target.value)}
+            placeholder="Search by email..."
+            className="flex-1 px-4 py-2 bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+          />
+          <button
+            type="submit"
+            disabled={isSearching}
+            className="px-4 sm:px-6 py-2 bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSearching ? 'Searching...' : 'Search'}
+          </button>
+        </div>
+      </form>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-900/20 border border-red-800 text-red-400 text-sm">
+          {error}
         </div>
       )}
 
-      {/* Search and Filter */}
-      <div className="mb-6 space-y-4">
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by need or skill..."
-            className="w-full px-4 py-3 border border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-zinc-600 focus:outline-none"
-          />
+      {successMessage && (
+        <div className="mb-4 p-3 bg-emerald-900/20 border border-emerald-800 text-emerald-400 text-sm">
+          {successMessage}
         </div>
+      )}
 
-        <div className="flex gap-2 flex-wrap">
-          {CATEGORIES.map(category => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 border transition-colors ${
-                selectedCategory === category
-                  ? 'bg-zinc-700 text-zinc-100 border-zinc-600'
-                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-600'
-              }`}
+      {searchResults.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-medium text-zinc-100">Search Results</h2>
+          {searchResults.map((result) => (
+            <div
+              key={result.userId}
+              className="p-4 bg-zinc-950 border border-zinc-800 flex items-center justify-between"
             >
-              {category}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="space-y-4">
-        {filteredNeeds.length === 0 ? (
-          <div className="text-center py-12 border border-zinc-800 bg-zinc-950">
-            <p className="text-zinc-500 mb-2">No needs found</p>
-            <p className="text-sm text-zinc-600">
-              Try adjusting your search or category filter
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="text-sm text-zinc-400 mb-4">
-              {filteredNeeds.length} {filteredNeeds.length === 1 ? 'result' : 'results'} found
-            </div>
-            {filteredNeeds.map(need => (
-              <div key={need.id} className="border border-zinc-800 p-6 bg-zinc-950">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 text-sm font-medium text-zinc-300">
-                        {need.category}
-                      </span>
-                      <span className={`text-sm font-medium ${getTrustLevelColor(need.trustLevelRequired)}`}>
-                        {need.trustLevelRequired.charAt(0).toUpperCase() + need.trustLevelRequired.slice(1)} level required
-                      </span>
-                    </div>
-                    <p className="text-lg text-zinc-100">
-                      {need.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-800">
-                  <div className="text-sm text-zinc-400">
-                    Posted by {need.postedBy} on {need.postedAt.toLocaleDateString()}
-                  </div>
-                  <button 
-                    className="px-4 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
-                    onClick={() => {
-                      if (window.confirm('Do you want to respond to this need? This will share your contact information with the poster.')) {
-                        alert('Response sent! The connection has been notified.');
-                      }
-                    }}
-                  >
-                    Respond
-                  </button>
+              <div className="flex items-center gap-3">
+                <img
+                  src={result.picture}
+                  alt={result.name}
+                  className="w-12 h-12 rounded-full"
+                />
+                <div>
+                  <div className="text-zinc-100 font-medium">{result.name}</div>
+                  <div className="text-sm text-zinc-400">{result.email}</div>
                 </div>
               </div>
-            ))}
-          </>
-        )}
-      </div>
+              <button
+                onClick={() => handleSendRequest(result)}
+                className="px-4 py-2 text-sm bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors"
+              >
+                Send Request
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {searchResults.length === 0 && searchEmail && !isSearching && !error && (
+        <div className="text-center py-12 text-zinc-400">
+          No results to display. Try searching for a user by email.
+        </div>
+      )}
+
+      {!searchEmail && (
+        <div className="text-center py-12 border border-zinc-800 bg-zinc-950">
+          <p className="text-zinc-400 mb-2">Start by searching for users</p>
+          <p className="text-sm text-zinc-500">
+            Enter an email address above to find and connect with people
+          </p>
+        </div>
+      )}
     </div>
   );
 }

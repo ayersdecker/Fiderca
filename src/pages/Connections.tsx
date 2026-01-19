@@ -1,6 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TrustLevel } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { useUserData } from '../contexts/UserDataContext';
+import {
+  subscribeToReceivedRequests,
+  acceptConnectionRequest,
+  rejectConnectionRequest,
+  type ConnectionRequest,
+} from '../services/connectionRequests';
+import { addConnection } from '../services/firestore';
 
 const TRUST_LEVEL_INFO: Record<TrustLevel, { label: string; description: string; color: string }> = {
   core: {
@@ -26,14 +34,27 @@ const TRUST_LEVEL_INFO: Record<TrustLevel, { label: string; description: string;
 };
 
 export default function Connections() {
-  const { connections, addConnection, deleteConnection } = useUserData();
+  const { user } = useAuth();
+  const { connections, deleteConnection } = useUserData();
   const [selectedTrustLevel, setSelectedTrustLevel] = useState<TrustLevel | 'all'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
   const [newConnection, setNewConnection] = useState({
     name: '',
     trustLevel: 'known' as TrustLevel,
     notes: ''
   });
+
+  // Subscribe to connection requests
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = subscribeToReceivedRequests(user.sub, (requests) => {
+      setPendingRequests(requests);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const filteredConnections = selectedTrustLevel === 'all' 
     ? connections 
@@ -41,14 +62,42 @@ export default function Connections() {
 
   const handleAddConnection = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newConnection.name.trim()) {
-      addConnection({
+    if (newConnection.name.trim() && user) {
+      addConnection(user.sub, {
         name: newConnection.name,
         trustLevel: newConnection.trustLevel,
         notes: newConnection.notes || undefined
       });
       setNewConnection({ name: '', trustLevel: 'known', notes: '' });
       setShowAddForm(false);
+    }
+  };
+
+  const handleAcceptRequest = async (request: ConnectionRequest) => {
+    if (!user) return;
+
+    try {
+      // Accept the request
+      await acceptConnectionRequest(request.id);
+      
+      // Add to connections
+      await addConnection(user.sub, {
+        name: request.fromUserName,
+        trustLevel: 'known',
+        notes: `Connected via ${request.fromUserEmail}`,
+      });
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      alert('Failed to accept connection request. Please try again.');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await rejectConnectionRequest(requestId);
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      alert('Failed to reject connection request. Please try again.');
     }
   };
 
@@ -60,24 +109,73 @@ export default function Connections() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-light text-zinc-100 mb-2">Connections</h1>
-          <p className="text-zinc-400">
+          <h1 className="text-2xl sm:text-3xl font-light text-zinc-100 mb-2">Connections</h1>
+          <p className="text-sm sm:text-base text-zinc-400">
             Your intentional network, organized by trust levels
           </p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-6 py-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
+          className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700 transition-colors"
         >
           {showAddForm ? 'Cancel' : 'Add Connection'}
         </button>
       </div>
 
+      {/* Pending Connection Requests */}
+      {pendingRequests.length > 0 && (
+        <div className="mb-6 border border-amber-800 bg-amber-900/10 p-4 sm:p-6">
+          <h2 className="text-lg font-medium text-zinc-100 mb-4 flex items-center gap-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-900 text-amber-200 text-xs font-bold">
+              {pendingRequests.length}
+            </span>
+            Pending Requests
+          </h2>
+          <div className="space-y-3">
+            {pendingRequests.map((request) => (
+              <div
+                key={request.id}
+                className="p-4 bg-zinc-950 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src={request.fromUserPicture}
+                    alt={request.fromUserName}
+                    className="w-12 h-12 rounded-full"
+                  />
+                  <div>
+                    <div className="text-zinc-100 font-medium">{request.fromUserName}</div>
+                    <div className="text-sm text-zinc-400">{request.fromUserEmail}</div>
+                    <div className="text-xs text-zinc-500 mt-1">
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 sm:ml-4">
+                  <button
+                    onClick={() => handleAcceptRequest(request)}
+                    className="flex-1 sm:flex-none px-4 py-2 text-sm bg-emerald-900 text-emerald-200 border border-emerald-700 hover:bg-emerald-800 transition-colors"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleRejectRequest(request.id)}
+                    className="flex-1 sm:flex-none px-4 py-2 text-sm bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 transition-colors"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Add Connection Form */}
       {showAddForm && (
-        <div className="mb-6 border border-zinc-800 p-6 bg-zinc-950">
+        <div className="mb-6 border border-zinc-800 p-4 sm:p-6 bg-zinc-950">
           <h2 className="text-lg font-medium text-zinc-100 mb-4">New Connection</h2>
           <form onSubmit={handleAddConnection} className="space-y-4">
             <div>
