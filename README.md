@@ -18,6 +18,7 @@ A trust-based social platform prototype centered on intentional connections and 
 - Tailwind CSS 4
 - React Router 7
 - Google OAuth 2.0 (@react-oauth/google)
+- Firebase (Firestore for database storage)
 
 ## Setup
 
@@ -27,18 +28,36 @@ A trust-based social platform prototype centered on intentional connections and 
    ```
 
 2. **Configure Google OAuth**
-   - Copy `.env.example` to `.env`
-   - Add your Google OAuth Client ID to the `.env` file:
-     ```
-     VITE_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
-     ```
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing one
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials (Web application)
+   - Add authorized JavaScript origins (e.g., `http://localhost:5173`)
+   - Copy the Client ID
 
-3. **Start development server**
+3. **Configure Firebase Database** 🔥
+   
+   **Quick Setup (Recommended):**
+   ```bash
+   npm run firebase:setup
+   ```
+   
+   **Manual Setup:**
+   - See [FIREBASE_DATABASE_SETUP.md](FIREBASE_DATABASE_SETUP.md) for detailed instructions
+   - Quick reference: [FIREBASE_QUICK_REFERENCE.md](FIREBASE_QUICK_REFERENCE.md)
+
+4. **Environment Variables**
+   - Copy `.env.example` to `.env`
+   - Add your Google OAuth Client ID
+   - Add your Firebase configuration values from Firebase Console
+   - See `.env.example` for required variables
+
+5. **Start development server**
    ```bash
    npm run dev
    ```
 
-The app uses Google OAuth for authentication. All routes except `/login` are protected and require authentication.
+The app uses Google OAuth for authentication and Firebase Firestore for data persistence. All routes except `/login` are protected and require authentication.
 
 ## Development
 

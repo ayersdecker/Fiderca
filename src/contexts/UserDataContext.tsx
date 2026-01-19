@@ -2,12 +2,14 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { UserData, Connection, Vault, CalendarEvent, Need } from '../types';
 import { useAuth } from './AuthContext';
+import * as firestoreService from '../services/firestore';
 
 interface UserDataContextType {
   connections: Connection[];
   vaults: Vault[];
   calendarEvents: CalendarEvent[];
   needs: Need[];
+  isLoading: boolean;
   addConnection: (connection: Omit<Connection, 'id' | 'connectedAt'>) => void;
   updateConnection: (id: string, updates: Partial<Connection>) => void;
   deleteConnection: (id: string) => void;
@@ -34,175 +36,105 @@ const EMPTY_USER_DATA: Omit<UserData, 'userId'> = {
 export function UserDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [userData, setUserData] = useState<Omit<UserData, 'userId'>>(EMPTY_USER_DATA);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load user data from localStorage when user changes
+  // Subscribe to real-time Firestore updates when user changes
   useEffect(() => {
-    if (user) {
-      const storageKey = `userData_${user.sub}`;
-      const storedData = localStorage.getItem(storageKey);
-      if (storedData) {
-        try {
-          const parsed = JSON.parse(storedData);
-          // Convert date strings back to Date objects
-          const data = {
-            connections: parsed.connections.map((c: Connection) => ({
-              ...c,
-              connectedAt: new Date(c.connectedAt)
-            })),
-            vaults: parsed.vaults.map((v: Vault) => ({
-              ...v,
-              createdAt: new Date(v.createdAt),
-              sharedWith: v.sharedWith.map(access => ({
-                ...access,
-                grantedAt: new Date(access.grantedAt),
-                expiresAt: access.expiresAt ? new Date(access.expiresAt) : undefined
-              }))
-            })),
-            calendarEvents: parsed.calendarEvents.map((e: CalendarEvent) => ({
-              ...e,
-              date: new Date(e.date)
-            })),
-            needs: parsed.needs.map((n: Need) => ({
-              ...n,
-              postedAt: new Date(n.postedAt)
-            }))
-          };
-          setUserData(data);
-        } catch (error) {
-          console.error('Failed to parse user data:', error);
-          setUserData(EMPTY_USER_DATA);
-        }
-      } else {
-        setUserData(EMPTY_USER_DATA);
-      }
-    } else {
+    if (!user) {
       setUserData(EMPTY_USER_DATA);
+      setIsLoading(false);
+      return;
     }
-  }, [user]);
 
-  // Save user data to localStorage whenever it changes
-  useEffect(() => {
-    if (user) {
-      const storageKey = `userData_${user.sub}`;
-      localStorage.setItem(storageKey, JSON.stringify(userData));
-    }
-  }, [userData, user]);
+    setIsLoading(true);
+    
+    // Initialize user data in Firestore if it doesn't exist
+    firestoreService.initializeUserData(user.sub).catch(console.error);
+    
+    // Subscribe to real-time updates
+    const unsubscribe = firestoreService.subscribeToUserData(user.sub, (data) => {
+      setUserData(data);
+      setIsLoading(false);
+    });
+
+    // Cleanup subscription on unmount or user change
+    return () => unsubscribe();
+  }, [user]);
 
   // Connection methods
   const addConnection = (connection: Omit<Connection, 'id' | 'connectedAt'>) => {
-    const newConnection: Connection = {
-      ...connection,
-      id: Date.now().toString(),
-      connectedAt: new Date()
-    };
-    setUserData(prev => ({
-      ...prev,
-      connections: [...prev.connections, newConnection]
-    }));
+    if (!user) return;
+    
+    firestoreService.addConnection(user.sub, connection).catch(console.error);
   };
 
   const updateConnection = (id: string, updates: Partial<Connection>) => {
-    setUserData(prev => ({
-      ...prev,
-      connections: prev.connections.map(c => 
-        c.id === id ? { ...c, ...updates } : c
-      )
-    }));
+    if (!user) return;
+    
+    firestoreService.updateConnection(user.sub, id, updates).catch(console.error);
   };
 
   const deleteConnection = (id: string) => {
-    setUserData(prev => ({
-      ...prev,
-      connections: prev.connections.filter(c => c.id !== id)
-    }));
+    if (!user) return;
+    
+    firestoreService.deleteConnection(user.sub, id).catch(console.error);
   };
 
   // Vault methods
   const addVault = (vault: Omit<Vault, 'id' | 'createdAt' | 'sharedWith'>) => {
-    const newVault: Vault = {
-      ...vault,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      sharedWith: []
-    };
-    setUserData(prev => ({
-      ...prev,
-      vaults: [...prev.vaults, newVault]
-    }));
+    if (!user) return;
+    
+    firestoreService.addVault(user.sub, vault).catch(console.error);
   };
 
   const updateVault = (id: string, updates: Partial<Vault>) => {
-    setUserData(prev => ({
-      ...prev,
-      vaults: prev.vaults.map(v => 
-        v.id === id ? { ...v, ...updates } : v
-      )
-    }));
+    if (!user) return;
+    
+    firestoreService.updateVault(user.sub, id, updates).catch(console.error);
   };
 
   const deleteVault = (id: string) => {
-    setUserData(prev => ({
-      ...prev,
-      vaults: prev.vaults.filter(v => v.id !== id)
-    }));
+    if (!user) return;
+    
+    firestoreService.deleteVault(user.sub, id).catch(console.error);
   };
 
   // Calendar event methods
   const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>) => {
-    const newEvent: CalendarEvent = {
-      ...event,
-      id: Date.now().toString()
-    };
-    setUserData(prev => ({
-      ...prev,
-      calendarEvents: [...prev.calendarEvents, newEvent]
-    }));
+    if (!user) return;
+    
+    firestoreService.addCalendarEvent(user.sub, event).catch(console.error);
   };
 
   const updateCalendarEvent = (id: string, updates: Partial<CalendarEvent>) => {
-    setUserData(prev => ({
-      ...prev,
-      calendarEvents: prev.calendarEvents.map(e => 
-        e.id === id ? { ...e, ...updates } : e
-      )
-    }));
+    if (!user) return;
+    
+    firestoreService.updateCalendarEvent(user.sub, id, updates).catch(console.error);
   };
 
   const deleteCalendarEvent = (id: string) => {
-    setUserData(prev => ({
-      ...prev,
-      calendarEvents: prev.calendarEvents.filter(e => e.id !== id)
-    }));
+    if (!user) return;
+    
+    firestoreService.deleteCalendarEvent(user.sub, id).catch(console.error);
   };
 
   // Need methods
   const addNeed = (need: Omit<Need, 'id' | 'postedAt' | 'postedBy'>) => {
-    const newNeed: Need = {
-      ...need,
-      id: Date.now().toString(),
-      postedAt: new Date(),
-      postedBy: user?.name || 'You'
-    };
-    setUserData(prev => ({
-      ...prev,
-      needs: [...prev.needs, newNeed]
-    }));
+    if (!user) return;
+    
+    firestoreService.addNeed(user.sub, need, user.name || 'You').catch(console.error);
   };
 
   const updateNeed = (id: string, updates: Partial<Need>) => {
-    setUserData(prev => ({
-      ...prev,
-      needs: prev.needs.map(n => 
-        n.id === id ? { ...n, ...updates } : n
-      )
-    }));
+    if (!user) return;
+    
+    firestoreService.updateNeed(user.sub, id, updates).catch(console.error);
   };
 
   const deleteNeed = (id: string) => {
-    setUserData(prev => ({
-      ...prev,
-      needs: prev.needs.filter(n => n.id !== id)
-    }));
+    if (!user) return;
+    
+    firestoreService.deleteNeed(user.sub, id).catch(console.error);
   };
 
   return (
@@ -212,6 +144,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
         vaults: userData.vaults,
         calendarEvents: userData.calendarEvents,
         needs: userData.needs,
+        isLoading,
         addConnection,
         updateConnection,
         deleteConnection,

@@ -1,0 +1,15 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "userData",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "connections",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

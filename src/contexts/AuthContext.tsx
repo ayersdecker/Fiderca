@@ -1,17 +1,20 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { onAuthStateChanged, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 export interface User {
   email: string;
   name: string;
   picture: string;
-  sub: string;
+  sub: string; // Firebase uid
 }
 
 interface AuthContextType {
   user: User | null;
+  firebaseUser: FirebaseUser | null;
   login: (userData: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -19,18 +22,33 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount
+  // Subscribe to Firebase auth state changes
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setFirebaseUser(firebaseUser);
+      
+      if (firebaseUser) {
+        // Create user object from Firebase user
+        const userData: User = {
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || '',
+          picture: firebaseUser.photoURL || '',
+          sub: firebaseUser.uid, // Use Firebase uid as sub
+        };
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      } else {
+        setUser(null);
         localStorage.removeItem('user');
       }
-    }
+      
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = (userData: User) => {
@@ -38,18 +56,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const logout = async () => {
+    try {
+      await firebaseSignOut(auth);
+      setUser(null);
+      setFirebaseUser(null);
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
+
+  if (loading) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        firebaseUser,
         login,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated: !!firebaseUser,
       }}
     >
       {children}

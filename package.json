@@ -7,10 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "firebase:setup": "./scripts/setup-firebase.sh",
+    "firebase:deploy": "firebase deploy --only firestore",
+    "firebase:rules": "firebase deploy --only firestore:rules",
+    "firebase:indexes": "firebase deploy --only firestore:indexes",
+    "firebase:validate": "./scripts/validate-firebase.sh"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
+    "firebase": "^12.8.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0"
