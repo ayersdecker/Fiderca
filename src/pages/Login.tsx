@@ -29,10 +29,10 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-zinc-950 border border-zinc-800 shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-900 px-4">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8 p-6 sm:p-8 bg-zinc-950 border border-zinc-800 shadow-lg">
         <div className="text-center">
-          <h2 className="text-3xl font-light text-zinc-100">Welcome to Fiderca</h2>
+          <h2 className="text-2xl sm:text-3xl font-light text-zinc-100">Welcome to Fiderca</h2>
           <p className="mt-2 text-sm text-zinc-400">
             Sign in with your Google account to continue
           </p>
@@ -44,11 +44,11 @@ function Login() {
           </div>
         )}
         
-        <div className="flex justify-center mt-8">
+        <div className="flex justify-center mt-6 sm:mt-8">
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="flex items-center gap-3 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-3 px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
