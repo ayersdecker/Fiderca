@@ -36,7 +36,8 @@ export async function sendConnectionRequest(
   fromUserPicture: string,
   toUserId: string,
   toUserName: string,
-  toUserEmail: string
+  toUserEmail: string,
+  toUserPicture: string
 ): Promise<string> {
   const requestsRef = collection(db, 'connectionRequests');
   
@@ -48,6 +49,7 @@ export async function sendConnectionRequest(
     toUserId,
     toUserName,
     toUserEmail,
+    toUserPicture,
     status: 'pending',
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
