@@ -33,18 +33,6 @@ export default function Layout() {
             {/* Desktop navigation */}
             <nav className="hidden md:flex gap-6 items-center">
               <Link 
-                to="/circles" 
-                className="text-zinc-400 hover:text-zinc-100 transition-colors"
-              >
-                Circles
-              </Link>
-              <Link 
-                to="/invites" 
-                className="text-zinc-400 hover:text-zinc-100 transition-colors"
-              >
-                Invites
-              </Link>
-              <Link 
                 to="/connections" 
                 className="text-zinc-400 hover:text-zinc-100 transition-colors"
               >
@@ -84,20 +72,6 @@ export default function Layout() {
           {/* Mobile navigation */}
           {mobileMenuOpen && (
             <nav className="md:hidden mt-4 pb-4 flex flex-col gap-4">
-              <Link 
-                to="/circles" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors py-2"
-              >
-                Circles
-              </Link>
-              <Link 
-                to="/invites" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors py-2"
-              >
-                Invites
-              </Link>
               <Link 
                 to="/connections" 
                 onClick={() => setMobileMenuOpen(false)}

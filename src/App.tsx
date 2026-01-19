@@ -2,9 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
-import CirclesList from './pages/CirclesList';
-import CircleDetail from './pages/CircleDetail';
-import Invites from './pages/Invites';
 import Connections from './pages/Connections';
 import Vaults from './pages/Vaults';
 import Calendar from './pages/Calendar';
@@ -34,9 +31,6 @@ function App() {
           }
         >
           <Route index element={<Home />} />
-          <Route path="circles" element={<CirclesList />} />
-          <Route path="circles/:circleId" element={<CircleDetail />} />
-          <Route path="invites" element={<Invites />} />
           <Route path="connections" element={<Connections />} />
           <Route path="vaults" element={<Vaults />} />
           <Route path="calendar" element={<Calendar />} />

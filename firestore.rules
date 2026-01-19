@@ -12,83 +12,38 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    function isCircleMember(circleId) {
-      return isSignedIn() && exists(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid));
-    }
-    
-    function isCircleAdmin(circleId) {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    // User profiles - readable by authenticated users
-    match /users/{userId} {
+    // User data - each user can only access their own data
+    match /userData/{userId} {
+      // Users can read their own data
+      allow read, write: if isOwner(userId);
+      
+      // Allow authenticated users to read userData (needed to discover shared vaults)
+      // This is safe because sensitive data should be in vaults, not userData
       allow read: if isSignedIn();
+      
+      // Prevent creation of documents with mismatched userId
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['connections', 'vaults', 'calendarEvents', 'needs']);
+    }
+    
+    // User profiles - readable by authenticated users for search
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for search)
+      allow read: if isSignedIn();
+      // Users can only write their own profile
       allow write: if isOwner(userId);
     }
     
-    // Circles - only members can access
-    match /circles/{circleId} {
-      allow read: if isCircleMember(circleId);
-      allow create: if isSignedIn(); // Creating a circle automatically makes you a member
-      allow update: if isCircleAdmin(circleId);
-      allow delete: if isCircleAdmin(circleId);
-      
-      // Members subcollection
-      match /members/{memberId} {
-        allow read: if isCircleMember(circleId);
-        // Only admins can add/remove members, except when creating a circle (creator becomes admin)
-        allow create: if isCircleAdmin(circleId) || 
-                        (request.resource.data.role == 'admin' && !exists(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid)));
-        allow update, delete: if isCircleAdmin(circleId);
-      }
-      
-      // Updates subcollection
-      match /updates/{updateId} {
-        allow read: if isCircleMember(circleId);
-        allow create: if isCircleMember(circleId) && request.resource.data.authorId == request.auth.uid;
-        allow delete: if isCircleMember(circleId) && resource.data.authorId == request.auth.uid;
-      }
-      
-      // Tasks subcollection
-      match /tasks/{taskId} {
-        allow read: if isCircleMember(circleId);
-        allow create: if isCircleMember(circleId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if isCircleMember(circleId);
-        allow delete: if isCircleMember(circleId);
-      }
-      
-      // Files subcollection
-      match /files/{fileId} {
-        allow read: if isCircleMember(circleId);
-        allow create: if isCircleMember(circleId) && request.resource.data.uploaderId == request.auth.uid;
-        allow delete: if isCircleMember(circleId) && resource.data.uploaderId == request.auth.uid;
-      }
-      
-      // Invites subcollection
-      match /invites/{inviteId} {
-        allow read: if isCircleMember(circleId) || 
-                      (isSignedIn() && resource.data.email == request.auth.token.email);
-        allow create: if isCircleMember(circleId) && request.resource.data.invitedBy == request.auth.uid;
-        allow update: if isSignedIn() && resource.data.email == request.auth.token.email;
-        allow delete: if isCircleMember(circleId) || 
-                        (isSignedIn() && resource.data.email == request.auth.token.email);
-      }
-    }
-    
-    // Legacy collections (keep for backwards compatibility during transition)
-    match /userData/{userId} {
-      allow read, write: if isOwner(userId);
-      allow read: if isSignedIn();
-      allow create: if isOwner(userId);
-    }
-    
+    // Connection requests
     match /connectionRequests/{requestId} {
+      // Users can read requests where they are sender or receiver
       allow read: if isSignedIn() && 
                     (resource.data.fromUserId == request.auth.uid || 
                      resource.data.toUserId == request.auth.uid);
+      // Users can create requests where they are the sender
       allow create: if isSignedIn() && 
                       request.resource.data.fromUserId == request.auth.uid;
+      // Users can update/delete requests where they are sender or receiver
       allow update, delete: if isSignedIn() && 
                               (resource.data.fromUserId == request.auth.uid || 
                                resource.data.toUserId == request.auth.uid);

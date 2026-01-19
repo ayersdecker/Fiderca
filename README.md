@@ -1,64 +1,82 @@
-# Fiderca - Circles-First Social App
+# Fiderca
+Network with Purpose
 
-> **🎯 Recent Pivot**: Fiderca has been reimagined as a **Circles-first social app** for small private groups. See [README.CIRCLES.md](README.CIRCLES.md) for comprehensive documentation.
+A trust-based social platform prototype centered on intentional connections and meaningful relationships.
 
-A private, circle-based social platform for small groups. Connect through family, co-parents, friends, teams, and support networks.
+## Features
 
-## ✨ Quick Links
+- **Trust-Based Connections**: Organize relationships by trust levels (Core, Close, Trusted, Known)
+- **Permissioned Vaults**: Share information selectively with temporary, revocable access
+- **Calendar Planning**: Coordinate with trusted connections
+- **Search by Need**: Find connections based on actual needs, not popularity
 
-- **[Full Documentation](README.CIRCLES.md)** - Complete setup guide for the new Circles app
-- **[Firebase Setup](FIREBASE_SETUP.md)** - Detailed Firebase configuration
-- **[Security Rules](firestore.circles.rules)** - Firestore security rules for Circles
+## Tech Stack
 
-## 🚀 Quick Start
-
-```bash
-# Clone and install
-git clone https://github.com/yourusername/Fiderca.git
-cd Fiderca
-npm install
-
-# Set up Firebase environment variables (see README.CIRCLES.md)
-# Create .env with your Firebase config
-
-# Deploy security rules (IMPORTANT!)
-firebase deploy --only firestore:rules
-firebase deploy --only storage
-
-# Run locally
-npm run dev
-```
-
-Visit `http://localhost:5173/Fiderca/`
-
-## 🎯 Core Features
-
-- **Circles**: Create private groups (Family, Co-parents, Friends, Team, Support)
-- **Updates**: Share text updates with circle members
-- **Tasks**: Create and track tasks within circles
-- **Files**: Upload and share files securely
-- **Invites**: Email-based circle invitations
-
-## 🛠 Tech Stack
-
-- React 19 + TypeScript + Vite
+- React 19
+- TypeScript
+- Vite
 - Tailwind CSS 4
 - React Router 7
-- Firebase (Auth + Firestore + Storage)
-- GitHub Pages deployment
+- Google OAuth 2.0 (@react-oauth/google)
+- Firebase (Firestore for database storage)
 
-## 📖 Documentation
+## Setup
 
-For complete setup instructions, data model details, security configuration, and deployment guide, see **[README.CIRCLES.md](README.CIRCLES.md)**.
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## 📝 Development Notes
+2. **Configure Google OAuth**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing one
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials (Web application)
+   - Add authorized JavaScript origins (e.g., `http://localhost:5173`)
+   - Copy the Client ID
 
-This project recently pivoted from a trust-based networking platform to a Circles-first social app. Some legacy features (Connections, Vaults, Calendar) remain in the codebase for transition purposes.
+3. **Configure Firebase Database** 🔥
+   
+   **Quick Setup (Recommended):**
+   ```bash
+   npm run firebase:setup
+   ```
+   
+   **Manual Setup:**
+   - See [FIREBASE_DATABASE_SETUP.md](FIREBASE_DATABASE_SETUP.md) for detailed instructions
+   - Quick reference: [FIREBASE_QUICK_REFERENCE.md](FIREBASE_QUICK_REFERENCE.md)
 
-## 📄 License
+4. **Environment Variables**
+   - Copy `.env.example` to `.env`
+   - Add your Google OAuth Client ID
+   - Add your Firebase configuration values from Firebase Console
+   - See `.env.example` for required variables
 
-MIT License - see LICENSE file
+5. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
----
+The app uses Google OAuth for authentication and Firebase Firestore for data persistence. All routes except `/login` are protected and require authentication.
 
-Built with ❤️ using React, TypeScript, and Firebase
+## Development
+
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Lint code
+npm run lint
+```
+
+## Design Principles
+
+- Calm, minimal, serious aesthetic
+- No infinite scroll
+- No gamification
+- Clear intent before actions
+- Relationship-based trust roles
+- Temporary and revocable permissions
