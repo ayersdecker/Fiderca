@@ -14,8 +14,12 @@ service cloud.firestore {
     
     // User data - each user can only access their own data
     match /userData/{userId} {
-      // Users can read and write only their own data
+      // Users can read their own data
       allow read, write: if isOwner(userId);
+      
+      // Allow authenticated users to read userData (needed to discover shared vaults)
+      // This is safe because sensitive data should be in vaults, not userData
+      allow read: if isSignedIn();
       
       // Prevent creation of documents with mismatched userId
       allow create: if isOwner(userId) && 

@@ -9,6 +9,7 @@ import {
   getDocs,
   Timestamp,
   onSnapshot,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -23,6 +24,7 @@ export interface ConnectionRequest {
   toUserId: string;
   toUserName: string;
   toUserEmail: string;
+  toUserPicture: string;
   status: ConnectionRequestStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -79,6 +81,7 @@ export async function getSentRequests(userId: string): Promise<ConnectionRequest
       toUserId: data.toUserId,
       toUserName: data.toUserName,
       toUserEmail: data.toUserEmail,
+      toUserPicture: data.toUserPicture,
       status: data.status as ConnectionRequestStatus,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -107,6 +110,7 @@ export async function getReceivedRequests(userId: string): Promise<ConnectionReq
       toUserId: data.toUserId,
       toUserName: data.toUserName,
       toUserEmail: data.toUserEmail,
+      toUserPicture: data.toUserPicture,
       status: data.status as ConnectionRequestStatus,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -138,6 +142,7 @@ export function subscribeToReceivedRequests(
         toUserId: data.toUserId,
         toUserName: data.toUserName,
         toUserEmail: data.toUserEmail,
+        toUserPicture: data.toUserPicture,
         status: data.status as ConnectionRequestStatus,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -147,12 +152,106 @@ export function subscribeToReceivedRequests(
   });
 }
 
-// Accept a connection request
-export async function acceptConnectionRequest(requestId: string): Promise<void> {
+// Subscribe to accepted requests sent by user (to add them to connections)
+export function subscribeToAcceptedSentRequests(
+  userId: string,
+  onAccepted: (request: ConnectionRequest) => void
+) {
+  const requestsRef = collection(db, 'connectionRequests');
+  const q = query(
+    requestsRef,
+    where('fromUserId', '==', userId),
+    where('status', '==', 'accepted')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'modified' || change.type === 'added') {
+        const data = change.doc.data();
+        const request: ConnectionRequest = {
+          id: change.doc.id,
+          fromUserId: data.fromUserId,
+          fromUserName: data.fromUserName,
+          fromUserEmail: data.fromUserEmail,
+          fromUserPicture: data.fromUserPicture,
+          toUserId: data.toUserId,
+          toUserName: data.toUserName,
+          toUserEmail: data.toUserEmail,
+          toUserPicture: data.toUserPicture,
+          status: data.status as ConnectionRequestStatus,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+        };
+        onAccepted(request);
+      }
+    });
+  });
+}
+
+// Accept a connection request (only updates current user's connections)
+export async function acceptConnectionRequest(
+  requestId: string,
+  currentUserId: string
+): Promise<void> {
   const requestRef = doc(db, 'connectionRequests', requestId);
-  await updateDoc(requestRef, {
-    status: 'accepted',
-    updatedAt: Timestamp.now(),
+  const currentUserRef = doc(db, 'userData', currentUserId);
+  
+  // Use a transaction to ensure atomic read-check-write
+  await runTransaction(db, async (transaction) => {
+    // Get the request data
+    const requestSnap = await transaction.get(requestRef);
+    if (!requestSnap.exists()) {
+      throw new Error('Connection request not found');
+    }
+    
+    const request = requestSnap.data();
+    
+    // Get current user's connections
+    const currentUserSnap = await transaction.get(currentUserRef);
+    const currentUserData = currentUserSnap.exists() ? currentUserSnap.data() : {};
+    const currentUserConnections = currentUserData.connections || [];
+    
+    // Determine which user data to add
+    const isReceiver = request.toUserId === currentUserId;
+    const otherUserId = isReceiver ? request.fromUserId : request.toUserId;
+    const otherUserName = isReceiver ? request.fromUserName : request.toUserName;
+    const otherUserEmail = isReceiver ? request.fromUserEmail : request.toUserEmail;
+    const otherUserPicture = isReceiver ? request.fromUserPicture : request.toUserPicture;
+    
+    // Check if connection already exists
+    const connectionExists = currentUserConnections.some((c: { id: string }) => c.id === otherUserId);
+    if (connectionExists) {
+      // Connection already exists, but still update request status if needed
+      if (request.status !== 'accepted') {
+        transaction.update(requestRef, {
+          status: 'accepted',
+          updatedAt: Timestamp.now(),
+        });
+      }
+      return;
+    }
+    
+    // Update request status
+    transaction.update(requestRef, {
+      status: 'accepted',
+      updatedAt: Timestamp.now(),
+    });
+    
+    // Add connection to current user
+    const connectionTimestamp = Timestamp.now();
+    transaction.update(currentUserRef, {
+      connections: [
+        ...currentUserConnections,
+        {
+          id: otherUserId,
+          name: otherUserName,
+          email: otherUserEmail,
+          picture: otherUserPicture,
+          trustLevel: 'known',
+          connectedAt: connectionTimestamp,
+        },
+      ],
+    });
   });
 }
 

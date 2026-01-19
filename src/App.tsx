@@ -5,7 +5,6 @@ import Home from './pages/Home';
 import Connections from './pages/Connections';
 import Vaults from './pages/Vaults';
 import Calendar from './pages/Calendar';
-import Search from './pages/Search';
 import Login from './pages/Login';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -35,7 +34,6 @@ function App() {
           <Route path="connections" element={<Connections />} />
           <Route path="vaults" element={<Vaults />} />
           <Route path="calendar" element={<Calendar />} />
-          <Route path="search" element={<Search />} />
         </Route>
       </Routes>
     </BrowserRouter>

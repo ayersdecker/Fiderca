@@ -5,6 +5,8 @@ export type TrustLevel = 'core' | 'close' | 'trusted' | 'known';
 export interface Connection {
   id: string;
   name: string;
+  email: string;
+  picture: string;
   trustLevel: TrustLevel;
   connectedAt: Date;
   notes?: string;
@@ -16,6 +18,8 @@ export interface Vault {
   description: string;
   createdAt: Date;
   sharedWith: VaultAccess[];
+  ownerId?: string; // Track who owns the vault
+  ownerName?: string; // Display owner name for shared vaults
 }
 
 export interface VaultAccess {
@@ -47,6 +51,7 @@ export interface UserData {
   userId: string;
   connections: Connection[];
   vaults: Vault[];
+  sharedVaults: Vault[]; // Vaults shared with this user by others
   calendarEvents: CalendarEvent[];
   needs: Need[];
 }

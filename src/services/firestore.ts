@@ -56,6 +56,15 @@ export function subscribeToUserData(
             expiresAt: access.expiresAt ? timestampToDate(access.expiresAt) : undefined,
           })),
         })),
+        sharedVaults: (data.sharedVaults || []).map((v: Record<string, unknown>) => ({
+          ...v,
+          createdAt: timestampToDate(v.createdAt),
+          sharedWith: (v.sharedWith as Array<Record<string, unknown>> || []).map((access: Record<string, unknown>) => ({
+            ...access,
+            grantedAt: timestampToDate(access.grantedAt),
+            expiresAt: access.expiresAt ? timestampToDate(access.expiresAt) : undefined,
+          })),
+        })),
         calendarEvents: (data.calendarEvents || []).map((e: Record<string, unknown>) => ({
           ...e,
           date: timestampToDate(e.date),
@@ -72,6 +81,7 @@ export function subscribeToUserData(
       callback({
         connections: [],
         vaults: [],
+        sharedVaults: [],
         calendarEvents: [],
         needs: [],
       });
@@ -207,6 +217,59 @@ export async function deleteVault(userId: string, vaultId: string): Promise<void
     await updateDoc(userDataRef, { vaults });
   }
 }
+
+// Share a vault with a connection (add to their sharedVaults)
+export async function shareVaultWithConnection(
+  ownerId: string,
+  ownerName: string,
+  vault: Vault,
+  connectionId: string
+): Promise<void> {
+  const connectionDataRef = getUserDataRef(connectionId);
+  const docSnap = await getDoc(connectionDataRef);
+  const currentData = docSnap.exists() ? docSnap.data() : {};
+  const sharedVaults = currentData.sharedVaults || [];
+  
+  // Add owner info to the vault
+  const sharedVault = {
+    ...vault,
+    ownerId,
+    ownerName,
+    createdAt: dateToTimestamp(vault.createdAt),
+    sharedWith: vault.sharedWith.map(access => ({
+      ...access,
+      grantedAt: dateToTimestamp(access.grantedAt),
+      expiresAt: access.expiresAt ? dateToTimestamp(access.expiresAt) : undefined,
+    })),
+  };
+  
+  // Check if already shared
+  const alreadyShared = sharedVaults.some((v: Record<string, unknown>) => v.id === vault.id && v.ownerId === ownerId);
+  if (!alreadyShared) {
+    await updateDoc(connectionDataRef, {
+      sharedVaults: [...sharedVaults, sharedVault],
+    });
+  }
+}
+
+// Remove a vault from someone's sharedVaults when access is revoked
+export async function unshareVaultWithConnection(
+  ownerId: string,
+  vaultId: string,
+  connectionId: string
+): Promise<void> {
+  const connectionDataRef = getUserDataRef(connectionId);
+  const docSnap = await getDoc(connectionDataRef);
+  const currentData = docSnap.data();
+  
+  if (currentData?.sharedVaults) {
+    const sharedVaults = (currentData.sharedVaults as Array<Record<string, unknown>>).filter(
+      (v: Record<string, unknown>) => !(v.id === vaultId && v.ownerId === ownerId)
+    );
+    await updateDoc(connectionDataRef, { sharedVaults });
+  }
+}
+
 
 // Calendar event operations
 export async function addCalendarEvent(

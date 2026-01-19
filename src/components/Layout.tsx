@@ -50,12 +50,6 @@ export default function Layout() {
               >
                 Calendar
               </Link>
-              <Link 
-                to="/search" 
-                className="text-zinc-400 hover:text-zinc-100 transition-colors"
-              >
-                Search
-              </Link>
               {user && (
                 <div className="flex items-center gap-3 ml-4 pl-4 border-l border-zinc-700">
                   <img 
@@ -98,13 +92,6 @@ export default function Layout() {
                 className="text-zinc-400 hover:text-zinc-100 transition-colors py-2"
               >
                 Calendar
-              </Link>
-              <Link 
-                to="/search" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors py-2"
-              >
-                Search
               </Link>
               {user && (
                 <div className="flex items-center gap-3 pt-4 border-t border-zinc-700">

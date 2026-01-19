@@ -26,11 +26,9 @@ export default function Search() {
 
     try {
       const results = await searchUsersByEmail(searchEmail.toLowerCase().trim());
-      // Filter out current user and existing connections
+      // Filter out current user only
       const filteredResults = results.filter(
-        (result) => 
-          result.userId !== user?.sub &&
-          !connections.some((conn) => conn.id === result.userId)
+        (result) => result.userId !== user?.sub
       );
       setSearchResults(filteredResults);
       
@@ -124,30 +122,40 @@ export default function Search() {
       {searchResults.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-lg font-medium text-zinc-100">Search Results</h2>
-          {searchResults.map((result) => (
-            <div
-              key={result.userId}
-              className="p-4 bg-zinc-950 border border-zinc-800 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src={result.picture}
-                  alt={result.name}
-                  className="w-12 h-12 rounded-full"
-                />
-                <div>
-                  <div className="text-zinc-100 font-medium">{result.name}</div>
-                  <div className="text-sm text-zinc-400">{result.email}</div>
-                </div>
-              </div>
-              <button
-                onClick={() => handleSendRequest(result)}
-                className="px-4 py-2 text-sm bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors"
+          {searchResults.map((result) => {
+            const isConnected = connections.some((conn) => conn.id === result.userId);
+            
+            return (
+              <div
+                key={result.userId}
+                className="p-4 bg-zinc-950 border border-zinc-800 flex items-center justify-between"
               >
-                Send Request
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-3">
+                  <img
+                    src={result.picture}
+                    alt={result.name}
+                    className="w-12 h-12 rounded-full"
+                  />
+                  <div>
+                    <div className="text-zinc-100 font-medium">{result.name}</div>
+                    <div className="text-sm text-zinc-400">{result.email}</div>
+                  </div>
+                </div>
+                {isConnected ? (
+                  <div className="px-4 py-2 text-sm text-emerald-400 border border-emerald-800 bg-emerald-900/20">
+                    Already Connected
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleSendRequest(result)}
+                    className="px-4 py-2 text-sm bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors"
+                  >
+                    Send Request
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

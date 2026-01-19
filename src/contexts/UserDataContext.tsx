@@ -3,10 +3,12 @@ import type { ReactNode } from 'react';
 import type { UserData, Connection, Vault, CalendarEvent, Need } from '../types';
 import { useAuth } from './AuthContext';
 import * as firestoreService from '../services/firestore';
+import { subscribeToSharedVaults } from '../services/sharedVaults';
 
 interface UserDataContextType {
   connections: Connection[];
   vaults: Vault[];
+  sharedVaults: Vault[];
   calendarEvents: CalendarEvent[];
   needs: Need[];
   isLoading: boolean;
@@ -29,6 +31,7 @@ const UserDataContext = createContext<UserDataContextType | undefined>(undefined
 const EMPTY_USER_DATA: Omit<UserData, 'userId'> = {
   connections: [],
   vaults: [],
+  sharedVaults: [],
   calendarEvents: [],
   needs: []
 };
@@ -52,18 +55,26 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     // Initialize user data in Firestore if it doesn't exist
     firestoreService.initializeUserData(user.sub).catch(console.error);
     
-    // Subscribe to real-time updates
-    const unsubscribe = firestoreService.subscribeToUserData(user.sub, (data) => {
+    // Subscribe to real-time updates for own data
+    const unsubscribeUserData = firestoreService.subscribeToUserData(user.sub, (data) => {
       if (mounted) {
-        setUserData(data);
+        setUserData(prev => ({ ...prev, ...data }));
         setIsLoading(false);
       }
     });
 
-    // Cleanup subscription on unmount or user change
+    // Subscribe to vaults shared with this user
+    const unsubscribeSharedVaults = subscribeToSharedVaults(user.sub, (vaults) => {
+      if (mounted) {
+        setUserData(prev => ({ ...prev, sharedVaults: vaults }));
+      }
+    });
+
+    // Cleanup subscriptions on unmount or user change
     return () => {
       mounted = false;
-      unsubscribe();
+      unsubscribeUserData();
+      unsubscribeSharedVaults();
     };
   }, [user]);
 
@@ -148,6 +159,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       value={{
         connections: userData.connections,
         vaults: userData.vaults,
+        sharedVaults: userData.sharedVaults,
         calendarEvents: userData.calendarEvents,
         needs: userData.needs,
         isLoading,
